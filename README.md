@@ -108,3 +108,66 @@ real a los eventos en lugar de operar de manera sincrónica y lineal.
 4. `Eventos`:
     - Datos estructurados que representan un cambio o acción. Generalmente, son mensajes con información del evento,
       como el ID del pedido, el timestamp, etc.
+
+## Transacciones en microservicios
+
+En una aplicación monolítica, implementar transacciones no es muy difícil, especialmente con el soporte de spring
+framework. Iniciamos la transacción, realizamos un conjunto de operaciones comerciales y, a continuación, finaliza la
+transacción. Si alguno de estos pasos dentro de una misma transacción no tiene éxito, podemos lanzar una excepción y
+todas las modificaciones de la base de datos que hayamos realizado se revertirán.
+
+Se trata de una transacción de activos de `todo` o `nada` y dentro de una misma aplicación es relativamente sencilla de
+implementar.
+
+![06.png](assets/section-01/06.png)
+
+Ahora, revisemos algunas de las propiedades de la `transacción ACID` que utilizamos en la aplicación monolítica.
+
+1. `Atomicidad`, las transacciones son atómicas, lo que significa que todas las operaciones se ejecutan con éxito o todo
+   falla a la vez.
+2. `Consistencia`, este principio asegura que una transacción llevará la base de datos de un estado válido a otro estado
+   válido, respetando todas las reglas y restricciones definidas, como claves primarias, claves foráneas, restricciones
+   únicas y validaciones. En otras palabras, después de completar una transacción, la base de datos no debe contener
+   datos inválidos o inconsistentes, y debe cumplir con las reglas de integridad definidas en su esquema.
+3. `Aislamiento`, la transacción que se esté ejecutando de forma concurrente no puede acceder al estado intermedio de
+   otra transacción. Este principio asegura que las transacciones concurrentes no interfieran entre sí y que cada
+   transacción se ejecute como si fuera la única operando en la base de datos. Aunque las transacciones pueden
+   ejecutarse simultáneamente, el aislamiento garantiza que su resultado sea el mismo que si se ejecutaran de manera
+   secuencial.
+4. `Durabilidad`, una vez realizada la transacción, los cambios en la base de datos se almacenan de forma duradera. Si
+   se produce un error o un fallo del sistema después de realizar la transacción, los cambios realizados en esta
+   transacción no se revertirán.
+
+En la arquitectura de microservicios, donde cada microservicio es una aplicación independiente con su propia base de
+datos, la ejecución de transacciones de activos es mucho más difícil. Ya no se trata de una única aplicación.
+
+El microservicio se ejecuta en diferentes servidores y se comunican entre sí a través de HTTP y ahora no hay una única
+base de datos con la que trabajar. Cada microservicio trabaja con su propia base de datos. Así, para realizar una
+transacción que coloque un nuevo pedido en nuestro sistema, varios microservicios tendrán que comunicarse entre sí.
+
+![07.png](assets/section-01/07.png)
+
+Por ejemplo, un cliente realiza un pedido y el microservicio de pedidos recibe una solicitud y crea un nuevo pedido.
+El microservicio de pedidos creará un nuevo registro en su propia base de datos y, si todo es correcto, enviará una
+solicitud a un microservicio de productos para reservar el producto seleccionado y las existencias. El Microservicio de
+productos, actualizará su propia base de datos para reservar el producto y el stock. Y si esta operación también tiene
+éxito, entonces se enviará la solicitud al microservicio del usuario para obtener los detalles de pago del usuario.
+Ahora, esperemos que esta operación también tenga éxito y si es así, entonces se enviará una solicitud para procesar
+los datos de pago. Si esta operación falla, la solicitud termina. La operación de colocación de pedidos no tiene éxito
+y acabamos con varias bases de datos en un estado incoherente. Tenemos un registro de pedido abierto en la base de datos
+de pedidos y tenemos un producto reservado en la base de datos de productos. El producto no se compró y no está
+disponible para que otros clientes lo compren también porque está reservado.
+
+Para arreglar la situación necesitamos implementar un `rollback de transacciones` y esta transacción tendrá que tener
+lugar entre múltiples microservicios y existen riesgos. Por ejemplo, el microservicio de productos puede fallar y
+acabamos con un sistema que tiene datos en un estado no válido.
+
+Para poder construir la lógica de negocio que se distribuye a través de múltiples microservicios y para lograr la
+coherencia de datos a través de estos microservicios distribuidos podemos utilizar un `patrón de diseño` que se llama
+`SAGA`.
+
+El patrón de diseño `SAGA` es una forma de gestionar la coherencia de datos entre microservicios en escenarios de
+transacciones distribuidas.
+
+Hay dos maneras diferentes de implementar el patrón de diseño saga: `coreografía` Y `orquestación`.
+
