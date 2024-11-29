@@ -328,3 +328,103 @@ abierto a rechazado.
 3. `Desventajas`
     - La complejidad adicional del diseño requiere la implementación de una lógica de coordinación.
     - Existe un punto de falla adicional, porque el orquestador administra el flujo de trabajo completo.
+
+## Command Query Responsibility Segregation (CQRS)
+
+En el patrón de diseño `CQRS`, la responsabilidad de los componentes en su aplicación se divide principalmente en dos
+partes principales: `comandos` y `consultas`.
+
+Supongamos que tenemos una aplicación Cliente REST que se comunica con nuestro microservicio. Así, cuando una aplicación
+cliente se comunica con nuestro microservicio, enviará una petición HTTP, como por ejemplo HTTP post, put, delete o
+patch, y también puede enviar una petición HTTP get.
+
+Podemos pensar en peticiones HTTP como `post`, `put`, `delete` o `patch` como `comandos` que realizan ciertas
+operaciones y **modifican información en nuestra base de datos.**
+
+Podemos pensar en la petición HTTP `get` como una `consulta` porque **solicita a nuestro microservicio que devuelva
+alguna información.**
+
+![12.png](assets/section-01/12.png)
+
+Por lo tanto, esa es una manera fácil de pensar en `CQRS`, pero no es sólo acerca de las peticiones HTTP que vienen de
+nuestro cliente REST. A medida que continuemos trabajando con el patrón de diseño `CQRS` en este apartado, verás que
+los `comandos` y `consultas` es como se realizará la comunicación dentro del microservicio y también entre
+microservicios.
+
+Siempre que queramos que un microservicio ejecute una determinada tarea, emitiremos un nuevo comando y siempre que tu
+microservicio necesite devolver alguna información de una base de datos, por ejemplo, utilizaremos una API de consulta.
+
+Por lo tanto, piense en un comando como una intención de desencadenar una acción, por ejemplo, crear un nuevo producto.
+Así mismo, piense que una consulta es una petición de información como por ejemplo, buscar producto por ID.
+
+Ahora fíjate que en la imagen anterior, la segregación de comandos y consultas se hace dentro de un único microservicio.
+Tenemos un único microservicio que se divide en dos partes principales, comandos y consultas. Si es necesario para
+escalar esto, podemos dividir este microservicio en dos microservicios separados.
+
+![13.png](assets/section-01/13.png)
+
+Un microservicio se encargará de los comandos y otro microservicio solo de las consultas. En la imagen anterior se ha
+dividido un único microservicio en dos microservicios separados.
+
+En el lado izquierdo, tenemos el microservicio de productos que es responsable de la gestión de comandos y en el lado
+derecho, tenemos el microservicio de productos que es responsable de la gestión de consultas.
+
+Cada uno de estos microservicios puede desplegarse independientemente del otro y, si es necesario, podemos iniciar
+múltiples instancias de cada uno de estos microservicios.
+
+El microservicio del lado izquierdo que es responsable de manejar los comandos, puede tener un controlador rest que
+escuchará las peticiones HTTP como `POST`, `PUT`, `DELETE` o `PATCH`, y tendrá un componente manejador de comandos que
+procesará los comandos recibidos. La responsabilidad de este microservicio será aceptar la petición HTTP, validar los
+datos y actualizar el estado de la aplicación. La base de datos de este microservicio puede optimizarse para operaciones
+de escritura.
+
+Cuando una aplicación cliente necesita solicitar alguna información de nuestro microservicio de productos, se enrutará
+una solicitud al microservicio del lado derecho que aceptará la solicitud HTTP `GET`, consultará la base de datos de
+lectura y devolverá la información solicitada. La base de datos de este microservicio puede optimizarse para operaciones
+de lectura y esto hace que nuestra arquitectura sea aún más flexible.
+
+Si nuestro microservicio recibe muchas operaciones de lectura, podemos optimizar su base de datos para las operaciones
+de lectura y, si es necesario, podemos iniciar más instancias de microservicio de consulta para dar servicio a esta gran
+cantidad de solicitudes HTTP de lectura.
+
+Ahora, una de estas preguntas que me viene a la mente es `cómo llega la información de la base de datos de escritura en
+el lado izquierdo a la base de datos de lectura que está en el lado derecho`. Y la respuesta es con la ayuda de la
+mensajería.
+
+![14.png](assets/section-01/14.png)
+
+El componente de manejo de comandos en el microservicio de la izquierda procesará el comando, persistirá la información
+en la base de datos y luego publicará un mensaje de evento que se almacenará en una cola de mensajes especial que está
+fuera de este microservicio y que es global para todos los microservicios.
+
+Por ejemplo, este mensaje de evento puede ser evento de actualización de producto y contendrá información sobre el
+estado actualizado de nuestro producto. Todos los microservicios interesados en el evento de actualización del producto
+pueden consumir este evento y procesarlo.
+
+Por ejemplo, el microservicio de la derecha tendrá un componente de gestión de eventos que consumirá el evento de
+producto actualizado y actualizará la base de datos de lectura para asegurarse de que la información que tiene es
+coherente con la información que está en la base de datos de escritura y como la comunicación entre estos microservicios
+se realiza a través de una cola de mensajería, conseguimos transparencia en la localización.
+
+Los dos microservicios desconocen por completo la ubicación del otro. Un microservicio que publica un mensaje de evento
+no sabe cuántos microservicios consumirán este mensaje de evento ni dónde está asignado este microservicio. A eso se le
+llama transparencia de localización.
+
+### Tipos de mensajes
+
+Recordemos la diferencia entre tres tipos diferentes de mensajes que se utilizan y aseguran como patrón de diseño.
+
+- `Command`, los comandos se utilizan para expresar la intención de cambiar el estado de la aplicación. Un ejemplo de
+  mensaje de comando será el `CreateProductCommand`, `UpdateProductCommand` o el `DeleteProductCommand`.
+  Como un comando es un intento de hacer un cambio, suele nombrarse en imperativo.
+
+
+- `Query`, las consultas se utilizan para expresar un deseo de información. Al crear consultas, normalmente las
+  nombraremos con un prefijo `find` o con un prefijo `get`. Por ejemplo, `FindProductQuery` o `GetUserQuery`.
+
+
+- `Event`, representa una notificación de que algo ha sucedido. Por ejemplo, `ProductCreatedEvent` o
+  `ProductUpdatedEvent`. Nuestra aplicación publicará un evento de producto creado o cuando se actualicen los detalles
+  del producto, nuestra aplicación publicará un evento con el nombre evento producto actualizado.
+
+
