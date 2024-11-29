@@ -296,3 +296,35 @@ producto, actualizará el estado del producto para que vuelva a estar disponible
 producto cancelado. La Saga consumirá este evento y publicará el comando de pedido rechazado. El Microservicio de
 pedidos consumirá el comando de pedido rechazado y actualizará la base de datos cambiando el estado de este pedido de
 abierto a rechazado.
+
+## ¿Qué patrón de saga utilizar?
+
+### Saga basada en coreografía
+
+1. `Beneficios`
+    - Es útil para flujos de trabajo simples que requieren pocos microservicios y no necesitan una lógica de
+      coordinación.
+    - No requiere implementación y mantenimiento de servicios adicionales para coordinar transacciones.
+    - No introduce un único punto de falla, ya que las responsabilidades se distribuyen entre los participantes de la
+      saga.
+
+2. `Desventajas`
+    - El flujo de trabajo puede volverse confuso al agregar nuevos pasos y microservicios. Cuantos más pasos haya en una
+      transacción, más difícil será rastrear qué participantes de la saga escuchan qué comandos.
+    - Existe el riesgo de una dependencia cíclica entre los participantes de la saga porque tienen que consumir los
+      comandos de los demás.
+    - La prueba de integración es difícil porque todos los servicios deben estar ejecutándose para simular una
+      transacción.
+
+### Saga basada en orquestación
+
+1. `Beneficios`
+    - Es útil para flujos de trabajo complejos que involucran muchos microservicios.
+    - Es más fácil controlar el flujo de actividades.
+    - No introduce dependencias cíclicas, ya que el orquestador depende unilateralmente de los participantes de la saga.
+    - Los participantes de la saga no necesitan saber acerca de los comandos para otros participantes. La separación
+      clara de preocupaciones simplifica la lógica empresarial.
+
+3. `Desventajas`
+    - La complejidad adicional del diseño requiere la implementación de una lógica de coordinación.
+    - Existe un punto de falla adicional, porque el orquestador administra el flujo de trabajo completo.
