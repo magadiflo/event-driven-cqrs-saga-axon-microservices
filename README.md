@@ -243,3 +243,56 @@ falla, los microservicios comienzan a realizar transacciones compensatorias.
 > cambios de modificación que se hicieron en nuestro sistema. Estas `transacciones de compensación` se realizan en
 > `orden inverso`.
 
+## SAGA basada en Orquestación (Orchestration)
+
+En la `saga basada en orquestación` tendrás un microservicio que además de otras clases, también contendrá la clase
+`saga`. Esta clase saga actuará como un orquestador o como un gestor de comandos que necesitan ser enviados. Veamos un
+ejemplo.
+
+![10.png](assets/section-01/10.png)
+
+Nuestro microservicio de pedidos recibe una petición http para crear un nuevo pedido. Se creará un nuevo pedido y se
+publicará un evento informando de que se ha creado el nuevo pedido. Nuestra saga consumirá este evento y publicará un
+comando para reservar producto en stock. El microservicio de productos estará suscrito para recibir el comando para
+reservar producto. Lo consumirá, lo procesará y publicará un evento de producto reservado.
+
+Debido a que nuestro `saga` funciona como gestor del flujo será esta saga quien consuma el evento de producto reservado
+y publicará un nuevo comando de procesamiento de pago. El microservicio de pago está suscrito para recibir la orden de
+proceso de pago, la consumirá, procesará el pago y, si todo es correcto, publicará el evento de pago procesado.
+En este paso, un pedido puede marcarse como aprobado y puede iniciarse un nuevo proceso para solicitar el envío del
+pedido.
+
+Dependiendo de cómo diseñes tu aplicación, podría ser una nueva saga o sólo unos pasos más en la saga existente. Por
+ejemplo, la saga actual puede consumir el evento pago procesado y publicar el comando crear ticket de envío. El
+Microservicio de envío consumirá el comando de crear ticket de envío, lo procesará, y si todo es correcto publicará un
+evento de ticket de envío creado.
+
+La `saga` consumirá el evento de creación de ticket de envío y publicará el comando de pedido aprobado. Esta vez será
+una clase manejadora en el microservicio de pedidos la que consuma este comando y marque el pedido como aprobado en la
+base de datos de pedidos. Y si el pedido se aprueba con éxito, se publicará un evento de pedido aprobado. Esto sería
+el camino feliz.
+
+Veamos cómo funciona una orquestación con saga cuando se produce un error en una de las etapas.
+
+![11.png](assets/section-01/11.png)
+
+Supongamos que el microservicio de pago no pudo verificar los detalles de pago del usuario y no pudo cobrar al usuario
+el producto seleccionado. Debido a que el pago ha fallado, no podemos continuar y no podemos enviar el producto, no
+podemos simplemente salir del flujo porque el producto ha sido marcado como reservado en nuestra base de datos.
+
+Si salimos ahora del flujo, el producto seguirá reservado y otros clientes no podrán comprarlo. Dado que la transacción
+no es exitosa, necesitamos revertir los cambios que se hicieron en este flujo iniciando una secuencia de eventos
+compensatorios. Los eventos compensatorios son acciones que necesitamos hacer para deshacer los cambios en nuestro
+sistema que se hicieron durante los pasos previos en esta transacción.
+
+> Recuerda que los `eventos compensatorios` deben realizarse en `orden inverso`.
+
+Así que el primer evento que tenemos que mirar es el evento de producto reservado. Este evento ha cambiado el estado de
+nuestro producto en una base de datos de disponible a reservado. Así que tenemos que realizar una transacción de
+compensación para actualizar el estado de este producto a disponible. Para ello, el servicio de pago publicará primero
+un evento llamado evento de autorización de tarjeta fallida. La Saga consumirá este evento y publicará el comando de
+cancelación de reserva de producto. El microservicio de producto consumirá el comando de cancelación de reserva de
+producto, actualizará el estado del producto para que vuelva a estar disponible y publicará el evento reserva de
+producto cancelado. La Saga consumirá este evento y publicará el comando de pedido rechazado. El Microservicio de
+pedidos consumirá el comando de pedido rechazado y actualizará la base de datos cambiando el estado de este pedido de
+abierto a rechazado.
