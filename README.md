@@ -171,3 +171,75 @@ transacciones distribuidas.
 
 Hay dos maneras diferentes de implementar el patrón de diseño saga: `coreografía` Y `orquestación`.
 
+## SAGA basada en Coreografía (Choreography)
+
+En la coreografía, no existe un controlador central. Cada microservicio es responsable de realizar su parte del trabajo
+y de comunicar los eventos relevantes al resto del sistema. Los servicios reaccionan a estos eventos según su lógica
+definida.
+
+Características clave:
+
+- `Descentralización`: Cada microservicio actúa de forma independiente, publicando eventos y reaccionando a eventos de
+  otros servicios.
+- `Eventos como mecanismo`: La comunicación ocurre a través de un sistema de mensajería o bus de eventos (como `Kafka` o
+  `RabbitMQ`).
+- `Alta cohesión y bajo acoplamiento`: Los servicios están menos acoplados entre sí, pero dependen del flujo correcto de
+  eventos.
+
+Ahora, en este apartado mostraremos un ejemplo del flujo de creación de órdenes. Este diagrama de orden completo es un
+ejemplo simplificado solo para demostrar cómo se inician los procesos de negocio en la pila basada en `coreografía`.
+
+Ahora bien, en la `saga basada en coreografías` los microservicios se comunican entre sí intercambiando eventos. Cuando
+el microservicio realiza una operación, publica un mensaje de evento en un sistema de mensajería como, por ejemplo, un
+un `Message Broker`.
+
+![08.png](assets/section-01/08.png)
+
+Por ejemplo, cuando se realiza un pedido, el microservicio de pedidos publicará un evento de creación de pedido. Un
+microservicio que esté interesado en recibir este evento lo recibirá tan pronto como este evento se publique en el
+`message broker`. Ahora, el microservicio de productos se suscribirá para recibir un evento de pedido creado y consumirá
+este evento en cuanto se publique. El microservicio de productos consumirá el evento de abono del pedido, realizará
+algunas operaciones comerciales para reservar productos en su sistema de inventario, por ejemplo. Y en cuanto esté hecho
+el microservicio de producto publicará un nuevo evento que se llamará `Evento Reservado de Producto`. Un microservicio
+interesado en recibir el evento de producto reservado consumirá este mensaje, lo procesará y publicará un nuevo evento.
+Por ejemplo, el microservicio de pago consumirá el evento de producto reservado, validará y procesará los detalles del
+pago y publicará el evento de proceso de pago porque el microservicio de envío está suscrito al evento del proceso de
+recepción de pagos, consumirá este mensaje creará un ticket para iniciar el proceso de entrega del producto y publicará
+el evento ticket de envío creado. Por último, como el microservicio de pedidos está suscrito a recibir el evento de
+creación de ticket de envío, lo consumirá y actualizará el estado del pedido como aprobado.
+
+En la `saga basada en coreografía`, cada microservicio publica en el evento principal que desencadena evento en otro
+microservicio. Puede pensar en este evento como una transacción que contiene múltiples transacciones locales.
+
+Por ejemplo, dentro de nuestra transacción única, necesitamos crear una nueva orden de reserva de producto y stock,
+procesar el pago, y luego crear la orden de envío. Para que esta transacción tenga éxito, cada paso también debe tener
+éxito. Si al menos uno de estos pasos no tiene éxito entonces necesitamos revertir esta transacción y deshacer los
+cambios que hayamos realizado en la base de datos. Para eso, el microservicio publicará un evento para realizar una
+transacción de compensación. Veamos cómo funciona.
+
+![09.png](assets/section-01/09.png)
+
+Supongamos que el microservicio de pago no ha podido procesar el pago correctamente porque la tarjeta de crédito del
+usuario ha sido rechazada. Esto significa que no podemos aceptar este pedido y no podemos continuar. La transacción
+posterior no se ha completado por lo que tenemos que deshacer los pasos anteriores.
+
+Cada microservicio que haya realizado cambios modificadores en el sistema necesitará realizar una transacción
+compensatoria para deshacer esto. Las modificaciones y compensaciones se realizan en orden inverso. Debido a que la
+transacción ha fallado en el microservicio de pago, el microservicio de pago publicará un evento de autorización de
+tarjeta fallida. El microservicio de productos se suscribirá para recibir el evento de autorización de tarjeta fallida
+y lo consumirá. El microservicio de productos marcará el producto reservado en una base de datos como disponible de
+nuevo y publicará el evento de reserva de producto cancelado. Ahora tenemos este producto disponible para que lo compren
+otros clientes, pero seguimos teniendo un pedido abierto en nuestra base de datos de pedidos.
+
+Debido a que el microservicio de productos ha publicado el evento de reserva de producto cancelado nuestro microservicio
+de pedidos lo consumirá. Marcaremos la orden abierta como rechazada y si es necesario también puede publicar un evento
+de orden rechazado para que otros microservicios que estén interesados en recibir este evento lo consuman. Esto podría
+completar los pasos de nuestra saga.
+
+Así que, para resumir algunos puntos importantes de la imagen anterior, cuando uno de los pasos del flujo de la saga
+falla, los microservicios comienzan a realizar transacciones compensatorias.
+
+> Las `transacciones de compensación` son operaciones que nuestro microservicio necesita realizar para deshacer los
+> cambios de modificación que se hicieron en nuestro sistema. Estas `transacciones de compensación` se realizan en
+> `orden inverso`.
+
