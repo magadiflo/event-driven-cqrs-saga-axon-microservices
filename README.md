@@ -427,4 +427,121 @@ Recordemos la diferencia entre tres tipos diferentes de mensajes que se utilizan
   `ProductUpdatedEvent`. Nuestra aplicación publicará un evento de producto creado o cuando se actualicen los detalles
   del producto, nuestra aplicación publicará un evento con el nombre evento producto actualizado.
 
+## Almacenamiento de Eventos (Event Sourcing)
 
+En este apartado aprenderemos acerca de `Event Sourcing` y cómo vamos a utilizarlo en nuestros microservicios
+que son alimentados por `Axon Framework`.
+
+### Sin Event Sourcing
+
+Consideremos un ejemplo de cómo persistimos la información en una aplicación tradicional que no utiliza
+`event sourcing`.
+
+Supongamos que tenemos una base de datos que almacena los productos que vendemos en nuestra tienda de comercio
+electrónico. Cuando una aplicación cliente envía una petición HTTP para crear un nuevo producto, nuestra aplicación
+almacenará los detalles del producto en una base de datos.
+
+Ahora, cuando una aplicación cliente envíe una solicitud para actualizar los detalles del producto, nuestra aplicación
+encontrará este producto en la base de datos y actualizará un registro existente con los detalles de un nuevo producto.
+
+![15.png](assets/section-01/15.png)
+
+Por lo tanto, una solicitud para actualizar los detalles del producto no creará un nuevo producto en nuestra base de
+datos. Simplemente, actualizará un registro existente con los detalles del nuevo producto y cuando una aplicación
+cliente envíe nuevamente una nueva solicitud para actualizar los detalles del producto, nuestra aplicación volverá a
+encontrar el producto en la base de datos y lo actualizará con los detalles del nuevo producto.
+
+No se crea ningún registro nuevo y nos limitamos a actualizar un registro existente con los detalles del nuevo producto.
+No importa cuántas veces actualicemos los detalles del producto en la base de datos, `siempre mantendremos un único
+registro con el estado más reciente del producto.`
+
+### Con Event Sourcing
+
+Veamos ahora cómo funciona el almacenamiento de eventos `(event sourcing)`. Cuando añadimos `event sourcing` a nuestra
+aplicación, en lugar de persistir solo el estado final del producto, persistimos un objeto de evento que tuvo lugar en
+nuestra aplicación.
+
+Cuando la aplicación del cliente envía una solicitud para crear un nuevo producto, nuestra aplicación se encargará de
+esta solicitud y lo procesará, pero también almacenará información sobre la solicitud como un evento que tuvo lugar.
+
+Por ejemplo, cuando nuestra aplicación gestiona una solicitud de creación de producto, creará y almacenará un objeto de
+evento llamado `ProductCreatedEvent`.
+
+La base de datos que almacena los objetos de eventos se denomina almacén de eventos `(Event Store)`. Ahora, cuando la
+aplicación cliente envíe una solicitud de actualización de producto, se creará un evento de actualización de producto
+`ProductUpdateEvent` que se almacenará de nuevo en la base de datos del `event store`.
+
+![16.png](assets/section-01/16.png)
+
+Observe que en la base de datos del `event store`, no actualizamos un registro existente, sino que almacenamos un nuevo
+evento que ha tenido lugar como un nuevo registro en una base de datos y cuando la aplicación cliente envíe una nueva
+solicitud para actualizar los detalles del producto, esto dará lugar a un nuevo `ProductUpdateEvent` creado y
+almacenado en la base de datos del `event store`. Por lo tanto, al utilizar el `event store`, nos aseguramos de que
+todos los cambios realizados en los detalles del producto se almacenen como una secuencia de eventos.
+
+Hemos almacenado todos los eventos que tuvieron lugar, además de tener el estado final de los detalles del producto,
+también podemos saber cómo hemos llegado a ese estado del objeto. En ese sentido, tenemos un histórico de datos que
+podemos utilizar con fines de auditoría o para reconstruir el estado del objeto en un momento dado.
+
+Ahora, veamos dónde se utiliza el `event sourcing` en una aplicación `CQRS`. A continuación, se muestra un diagrama de
+un microservicio de producto que hemos dividido en dos APIs para adoptar el patrón de diseño `CQRS`.
+
+![17.png](assets/section-01/17.png)
+
+A la izquierda tenemos un `Command API` y a la derecha un `Query API`. Cuando una aplicación cliente envía una solicitud
+de HTTP post para crear un nuevo producto, el `Commands Handler` gestionará el comando. Se creará un
+`ProductCreatedEvent` y se persistirá en una base de datos que ahora se llamará `Event Store`.
+
+El `ProductCreatedEvent` también se publicará para que otros componentes que estén interesados en este evento puedan
+consumirlo. El `Events Handler` en la `Query API` que está en el lado derecho, consumirá el `ProductCreatedEvent`, y la
+base de datos de `Lectura` también será actualizada con un nuevo registro.
+
+La diferencia entre el `event store` en el lado izquierdo y la base de datos de lectura en el lado derecho es que la
+base de datos de `event store` contendrá el registro de cada uno de los eventos que tuvieron lugar para el producto.
+Mientras que la base de datos de lectura de la derecha solo contendrá un único registro, que es el último estado de
+los detalles de la entidad producto.
+
+> Si comparamos el `event store` y la base de datos de lectura uno al lado del otro, el event store contendrá una
+> secuencia de eventos que tuvieron lugar para un producto, pero la base de datos de lectura sólo contendrá el estado
+> final del producto.
+
+![18.png](assets/section-01/18.png)
+
+Otra diferencia muy importante entre el event store y la base de datos de lectura es que el event store solo almacenará
+los detalles del evento. No almacenará todo el objeto de detalles del producto, mientras que un registro en la base de
+datos de Lectura, almacena toda la información de detalles del producto.
+
+Supongamos que tenemos un endpoint que acepta una petición HTTP para actualizar solo el precio del producto. Cuando este
+evento es procesado, nuestra API creará un nuevo evento que se llamará algo así como `ProductPriceUpdatedEvent`, y
+persistirá el Evento de Actualización de Precio de Producto en el almacén de eventos.
+
+![19.png](assets/section-01/19.png)
+
+Si observa los datos del payload del evento que se guardaron en el `event store`, solo contienen el ID y el precio del
+producto. No contiene ninguna otra información sobre el producto, solo contiene los datos necesarios para actualizar el
+estado del producto, pero el registro de la base de datos de lectura siempre contendrá el estado final del producto y
+toda la información necesaria sobre ese producto que debe mostrarse en la interfaz de usuario.
+
+Debido a que el almacén de eventos contiene todos los eventos que tuvieron lugar para el producto, tenemos un histórico
+de datos del mismo, y si es necesario, podemos reproducir todos los eventos en el almacén de eventos y crear una base de
+datos Read nueva o adicional con diferente estructura que puede ser utilizada para una vista diferente.
+
+La reproducción de eventos también puede ser muy útil a la hora de depurar su aplicación para un problema específico que
+ocurrió en el pasado. Simplemente, se reproducen los acontecimientos hasta el momento en que se produjo un incidente y
+se evalúa el estado actual. Si encuentra un problema con la lógica de la aplicación, puede solucionarlo y volver a
+reproducir los eventos.
+
+La repetición de los acontecimientos no siempre se produce a nuestra orden. De hecho, la repetición de los eventos
+ocurre todo el tiempo cuando se está cargando un estado del producto desde el almacén de eventos.
+
+![20.png](assets/section-01/20.png)
+
+Veamos un ejemplo del comando Actualizar producto. Cuando nuestra aplicación `CRQS` que utiliza fuentes de eventos
+gestiona el comando Actualizar producto, el estado del producto se reconstruirá primero reproduciendo cada uno de los
+eventos que tuvieron lugar para ese producto. Una vez reconstruido el estado del objeto producto, se actualizará con
+nuevos detalles y se persistirá un nuevo evento en el almacén de eventos.
+
+Podrías pensar que la función de repetición de eventos es un problema de rendimiento, pero aparentemente se hace muy
+rápido, e incluso si hay demasiados eventos en el almacén de eventos, entonces `Axon Framework` soporta una
+característica que se llama instantáneas. Puedes hacer instantáneas de los eventos en el almacén de eventos y luego
+reproducir los eventos de una instantánea en particular. 
