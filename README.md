@@ -544,4 +544,41 @@ nuevos detalles y se persistirá un nuevo evento en el almacén de eventos.
 Podrías pensar que la función de repetición de eventos es un problema de rendimiento, pero aparentemente se hace muy
 rápido, e incluso si hay demasiados eventos en el almacén de eventos, entonces `Axon Framework` soporta una
 característica que se llama instantáneas. Puedes hacer instantáneas de los eventos en el almacén de eventos y luego
-reproducir los eventos de una instantánea en particular. 
+reproducir los eventos de una instantánea en particular.
+
+## Axon Framework y Axon Server
+
+Para construir la lógica de negocio que se extiende a través de múltiples microservicios distribuidos, en este curso
+utilizaremos `Axon Framework`.
+
+En este apartado se muestra una breve introducción a `Axon Framework`. He aquí una arquitectura típica de aplicación
+basada en `Axon`.
+
+![21.png](assets/section-01/21.png)
+
+`Axon Framework` se basa en principios arquitectónicos como el diseño impulsado por dominios `(DDD)`, la seguridad y
+la arquitectura `event driven`. Podemos ver todos estos principios aplicados en el diagrama anterior.
+
+Nuestra aplicación se divide en dos partes principales, que son el comando y la consulta. Utiliza el `event sourcing`,
+y persistirá los principales eventos en el `event storage`.
+
+La API de comandos también publicará un evento que haya sido almacenado en el `event store`, para que otros componentes
+que estén interesados en este evento puedan consumirlo y actuar en consecuencia.
+
+Uno de estos componentes será un manejador de eventos que se encuentra en el lado de la consulta. Consumirá un evento y
+actualizará la base de datos de consultas con nueva información.
+
+Ahora cuando se trata de almacenamiento, entonces `Axon` nos da una opción para configurar dónde almacenar nuestros
+eventos y datos. Por ejemplo, como almacenamiento de eventos, podemos utilizar `Event Store` que nos proporciona
+`Axon Framework` o podemos optar por almacenar nuestros eventos en el sistema tradicional de gestión de bases de datos
+racionales. Como, por ejemplo, `PostgreSQL`, `MySQL` o podemos elegir bases de datos `NOSQL` como, por ejemplo,
+`MongoDB`.
+
+En este curso utilizaremos como `event store` la solución de almacén de eventos proporcionada por `Axon`. Y por el lado
+de la base de datos de lectura, utilizaremos la base de datos `PostgreSQL` (en el curso original usa H2), pero puedes
+utilizar fácilmente cualquier otro servidor de bases de datos que prefieras.
+
+`Axon` no es solo un framework, es una infraestructura que también incluye `Axon Server`. `Axon Server` gestiona todos
+los enrutadores de mensajes y el almacén de eventos. Además, está disponible en dos ediciones: la Standard y la
+Enterprise, que puede funcionar en clústeres y ampliarse a varias regiones geográficas.
+
