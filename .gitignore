@@ -34,3 +34,4 @@ build/
 
 #AxonServer
 axon-server-2024.1.4/
+axon-server-docker/
