@@ -1,4 +1,4 @@
-package dev.magadiflo.app.controller;
+package dev.magadiflo.app.rest;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
@@ -17,8 +17,8 @@ public class ProductController {
     }
 
     @PostMapping
-    public String createProduct() {
-        return "HTTP POST Handled";
+    public String createProduct(@RequestBody CreateProductRestModel request) {
+        return "HTTP POST Handled " + request.getTitle();
     }
 
     @PutMapping
