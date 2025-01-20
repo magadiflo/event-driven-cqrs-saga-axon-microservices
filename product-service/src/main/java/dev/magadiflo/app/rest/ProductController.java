@@ -2,6 +2,7 @@ package dev.magadiflo.app.rest;
 
 import dev.magadiflo.app.command.CreateProductCommand;
 import lombok.RequiredArgsConstructor;
+import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +14,7 @@ import java.util.UUID;
 public class ProductController {
 
     private final Environment environment;
+    private final CommandGateway commandGateway;
 
     @GetMapping
     public String getProduct() {
@@ -27,7 +29,14 @@ public class ProductController {
                 .title(request.getTitle())
                 .productId(UUID.randomUUID().toString())
                 .build();
-        return "HTTP POST Handled " + request.getTitle();
+
+        String returnValue;
+        try {
+            returnValue = this.commandGateway.sendAndWait(createProductCommand);
+        } catch (Exception e) {
+            returnValue = e.getLocalizedMessage();
+        }
+        return returnValue;
     }
 
     @PutMapping
