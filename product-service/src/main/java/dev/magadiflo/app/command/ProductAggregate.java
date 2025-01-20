@@ -4,13 +4,26 @@ import lombok.NoArgsConstructor;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.spring.stereotype.Aggregate;
 
+import java.math.BigDecimal;
+import java.util.Objects;
+
 @NoArgsConstructor
 @Aggregate
 public class ProductAggregate {
 
     @CommandHandler
     public ProductAggregate(CreateProductCommand createProductCommand) {
-        // validate create product command
+        if (createProductCommand.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("El precio no puede ser menor o igual a cero");
+        }
+
+        if (Objects.isNull(createProductCommand.getQuantity()) || createProductCommand.getQuantity() < 0) {
+            throw new IllegalArgumentException("La cantidad debe ser mayor o igual a cero");
+        }
+
+        if (Objects.isNull(createProductCommand.getTitle()) || createProductCommand.getTitle().isBlank()) {
+            throw new IllegalArgumentException("El título no puede estar vacío");
+        }
     }
 
 }
