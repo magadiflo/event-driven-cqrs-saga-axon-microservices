@@ -1,7 +1,9 @@
 package dev.magadiflo.app.command;
 
+import dev.magadiflo.app.core.event.ProductCreatedEvent;
 import lombok.NoArgsConstructor;
 import org.axonframework.commandhandling.CommandHandler;
+import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
 
 import java.math.BigDecimal;
@@ -24,6 +26,14 @@ public class ProductAggregate {
         if (Objects.isNull(createProductCommand.getTitle()) || createProductCommand.getTitle().isBlank()) {
             throw new IllegalArgumentException("El título no puede estar vacío");
         }
+
+        ProductCreatedEvent productCreatedEvent = new ProductCreatedEvent();
+        productCreatedEvent.setProductId(createProductCommand.getProductId());
+        productCreatedEvent.setTitle(createProductCommand.getTitle());
+        productCreatedEvent.setPrice(createProductCommand.getPrice());
+        productCreatedEvent.setQuantity(createProductCommand.getQuantity());
+
+        AggregateLifecycle.apply(productCreatedEvent);
     }
 
 }
