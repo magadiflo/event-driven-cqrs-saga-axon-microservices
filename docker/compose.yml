@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:15.2-alpine
+    container_name: c-product-service-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: db_product_service
+      POSTGRES_USER: magadiflo
+      POSTGRES_PASSWORD: magadiflo
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_axon_product_data:/var/lib/postgresql/data
+    networks:
+      - axon_network
+
+volumes:
+  postgres_axon_product_data:
+    name: postgres_axon_product_data
+
+networks:
+  axon_network:
+    name: axon_network

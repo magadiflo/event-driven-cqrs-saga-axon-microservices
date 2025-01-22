@@ -6,6 +6,16 @@ server:
 spring:
   application:
     name: product-service
+  datasource:
+    url: jdbc:postgresql://localhost:5435/db_product_service
+    username: magadiflo
+    password: magadiflo
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
 
 eureka:
   instance:
@@ -15,3 +25,8 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+
+logging:
+  level:
+    dev.magadiflo.app: DEBUG
+    org.hibernate.SQL: DEBUG
