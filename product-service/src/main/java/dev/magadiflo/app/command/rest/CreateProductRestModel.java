@@ -1,4 +1,4 @@
-package dev.magadiflo.app.rest;
+package dev.magadiflo.app.command.rest;
 
 import lombok.Data;
 

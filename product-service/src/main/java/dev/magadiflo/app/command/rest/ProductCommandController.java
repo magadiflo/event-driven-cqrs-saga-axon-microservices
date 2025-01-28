@@ -1,4 +1,4 @@
-package dev.magadiflo.app.rest;
+package dev.magadiflo.app.command.rest;
 
 import dev.magadiflo.app.command.CreateProductCommand;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +11,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping(path = "/api/v1/products")
-public class ProductController {
+public class ProductCommandController {
 
     private final Environment environment;
     private final CommandGateway commandGateway;
