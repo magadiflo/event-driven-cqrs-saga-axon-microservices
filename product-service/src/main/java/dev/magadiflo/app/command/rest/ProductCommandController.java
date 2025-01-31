@@ -1,6 +1,7 @@
 package dev.magadiflo.app.command.rest;
 
 import dev.magadiflo.app.command.CreateProductCommand;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +19,7 @@ public class ProductCommandController {
     private final CommandGateway commandGateway;
 
     @PostMapping
-    public String createProduct(@RequestBody CreateProductRestModel request) {
+    public String createProduct(@Valid @RequestBody CreateProductRestModel request) {
         CreateProductCommand createProductCommand = CreateProductCommand.builder()
                 .price(request.getPrice())
                 .quantity(request.getQuantity())
