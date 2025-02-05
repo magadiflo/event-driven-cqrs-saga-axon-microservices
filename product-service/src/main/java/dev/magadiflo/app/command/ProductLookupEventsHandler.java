@@ -1,7 +1,7 @@
-package dev.magadiflo.app.query;
+package dev.magadiflo.app.command;
 
-import dev.magadiflo.app.core.data.ProductEntity;
-import dev.magadiflo.app.core.data.ProductRepository;
+import dev.magadiflo.app.core.data.ProductLookupEntity;
+import dev.magadiflo.app.core.data.ProductLookupRepository;
 import dev.magadiflo.app.core.event.ProductCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.config.ProcessingGroup;
@@ -11,20 +11,18 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @ProcessingGroup("product-group")
 @Component
-public class ProductEventsHandler {
+public class ProductLookupEventsHandler {
 
-    private final ProductRepository productRepository;
+    private final ProductLookupRepository productLookupRepository;
 
     @EventHandler
     public void on(ProductCreatedEvent event) {
-
-        ProductEntity productEntity = ProductEntity.builder()
+        ProductLookupEntity productLookupEntity = ProductLookupEntity.builder()
                 .productId(event.getProductId())
                 .title(event.getTitle())
-                .price(event.getPrice())
-                .quantity(event.getQuantity())
                 .build();
 
-        this.productRepository.save(productEntity);
+        this.productLookupRepository.save(productLookupEntity);
     }
+
 }
