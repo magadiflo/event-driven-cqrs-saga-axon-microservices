@@ -1,20 +1,26 @@
 package dev.magadiflo.app.command.interceptors;
 
 import dev.magadiflo.app.command.CreateProductCommand;
+import dev.magadiflo.app.core.data.ProductLookupEntity;
+import dev.magadiflo.app.core.data.ProductLookupRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.CommandMessage;
 import org.axonframework.messaging.MessageDispatchInterceptor;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Nonnull;
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiFunction;
 
 @Slf4j
+@RequiredArgsConstructor
 @Component
 public class CreateProductCommandInterceptor implements MessageDispatchInterceptor<CommandMessage<?>> {
+
+    private final ProductLookupRepository productLookupRepository;
+
     @Nonnull
     @Override
     public BiFunction<Integer, CommandMessage<?>, CommandMessage<?>> handle(@Nonnull List<? extends CommandMessage<?>> messages) {
@@ -26,17 +32,11 @@ public class CreateProductCommandInterceptor implements MessageDispatchIntercept
 
                 CreateProductCommand payload = (CreateProductCommand) commandMessage.getPayload();
 
-                if (payload.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new IllegalArgumentException("El precio no puede ser menor o igual a cero");
+                Optional<ProductLookupEntity> optionalProductLookup = this.productLookupRepository.findByProductIdOrTitle(payload.getProductId(), payload.getTitle());
+                if (optionalProductLookup.isPresent()) {
+                    throw new IllegalStateException("Product with productId %s or title %s already exist".formatted(payload.getProductId(), payload.getTitle()));
                 }
 
-                if (Objects.isNull(payload.getQuantity()) || payload.getQuantity() < 0) {
-                    throw new IllegalArgumentException("La cantidad debe ser mayor o igual a cero");
-                }
-
-                if (Objects.isNull(payload.getTitle()) || payload.getTitle().isBlank()) {
-                    throw new IllegalArgumentException("El título no puede estar vacío");
-                }
             }
 
             return commandMessage;
