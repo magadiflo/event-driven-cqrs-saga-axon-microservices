@@ -2,6 +2,7 @@ package dev.magadiflo.app.command;
 
 import dev.magadiflo.app.core.event.ProductCreatedEvent;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
@@ -11,6 +12,7 @@ import org.axonframework.spring.stereotype.Aggregate;
 import java.math.BigDecimal;
 import java.util.Objects;
 
+@Slf4j
 @NoArgsConstructor
 @Aggregate
 public class ProductAggregate {
@@ -46,6 +48,7 @@ public class ProductAggregate {
 
     @EventSourcingHandler
     public void on(ProductCreatedEvent event) {
+        log.info("Asigna valores de las propiedades del ProductCreatedEvent a las propiedades del ProductAggregate");
         this.productId = event.getProductId();
         this.title = event.getTitle();
         this.price = event.getPrice();
