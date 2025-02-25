@@ -26,13 +26,6 @@ public class ProductCommandController {
                 .title(request.getTitle())
                 .productId(UUID.randomUUID().toString())
                 .build();
-
-        String returnValue;
-        try {
-            returnValue = this.commandGateway.sendAndWait(createProductCommand);
-        } catch (Exception e) {
-            returnValue = e.getLocalizedMessage();
-        }
-        return returnValue;
+        return this.commandGateway.sendAndWait(createProductCommand);
     }
 }
