@@ -19,7 +19,7 @@ public class ProductEventsHandler {
     private final ProductRepository productRepository;
 
     @EventHandler
-    public void on(ProductCreatedEvent event) {
+    public void on(ProductCreatedEvent event) throws Exception {
         log.info("A partir del ProductCreatedEvent crea el ProductEntity para guardar en la base de datos.");
         ProductEntity productEntity = ProductEntity.builder()
                 .productId(event.getProductId())
@@ -29,6 +29,8 @@ public class ProductEventsHandler {
                 .build();
 
         this.productRepository.save(productEntity);
+
+        if (true) throw new Exception("Focing exception in the Event Handler Class");
     }
 
     @ExceptionHandler(resultType = IllegalArgumentException.class)
