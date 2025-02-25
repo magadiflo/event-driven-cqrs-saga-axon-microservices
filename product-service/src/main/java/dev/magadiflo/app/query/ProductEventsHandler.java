@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.config.ProcessingGroup;
 import org.axonframework.eventhandling.EventHandler;
+import org.axonframework.messaging.interceptors.ExceptionHandler;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -28,5 +29,15 @@ public class ProductEventsHandler {
                 .build();
 
         this.productRepository.save(productEntity);
+    }
+
+    @ExceptionHandler(resultType = IllegalArgumentException.class)
+    public void handle(IllegalArgumentException exception) {
+        log.error("Ocurrió un error: {}", exception.getMessage());
+    }
+
+    @ExceptionHandler(resultType = Exception.class)
+    public void handle(Exception exception) {
+        log.error("Ocurrió un error general: {}", exception.getMessage());
     }
 }
