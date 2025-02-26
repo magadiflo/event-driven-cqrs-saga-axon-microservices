@@ -14,9 +14,26 @@ services:
     networks:
       - axon_network
 
+  postgres-order:
+    image: postgres:15.2-alpine
+    container_name: c-order-service-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: db_order_service
+      POSTGRES_USER: magadiflo
+      POSTGRES_PASSWORD: magadiflo
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_axon_order_data:/var/lib/postgresql/data
+    networks:
+      - axon_network
+
 volumes:
   postgres_axon_product_data:
     name: postgres_axon_product_data
+  postgres_axon_order_data:
+    name: postgres_axon_order_data
 
 networks:
   axon_network:
