@@ -1,3 +1,33 @@
+server:
+  port: 0
+  error:
+    include-message: always
+    include-binding-errors: always
+
 spring:
   application:
     name: order-service
+  datasource:
+    url: jdbc:postgresql://localhost:5436/db_order_service
+    username: magadiflo
+    password: magadiflo
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+eureka:
+  instance:
+    hostname: localhost
+    instance-id: ${spring.application.name}:${random.value}
+
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+logging:
+  level:
+    dev.magadiflo.app: DEBUG
+    org.hibernate.SQL: DEBUG
