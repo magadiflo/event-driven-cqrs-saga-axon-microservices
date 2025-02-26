@@ -29,8 +29,6 @@ public class ProductEventsHandler {
                 .build();
 
         this.productRepository.save(productEntity);
-
-        if (true) throw new Exception("Focing exception in the Event Handler Class");
     }
 
     @ExceptionHandler(resultType = IllegalArgumentException.class)
