@@ -1,5 +1,6 @@
 package dev.magadiflo.app.saga;
 
+import com.magadiflo.core.app.commands.ReserveProductCommand;
 import dev.magadiflo.app.core.event.OrderCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -16,6 +17,17 @@ public class OrderSaga {
     @StartSaga
     @SagaEventHandler(associationProperty = "orderId")
     public void handle(OrderCreatedEvent orderCreatedEvent) {
+        ReserveProductCommand reserveProductCommand = ReserveProductCommand.builder()
+                .orderId(orderCreatedEvent.getOrderId())
+                .userId(orderCreatedEvent.getUserId())
+                .productId(orderCreatedEvent.getProductId())
+                .quantity(orderCreatedEvent.getQuantity())
+                .build();
 
+        this.commandGateway.send(reserveProductCommand, (commandMessage, commandResultMessage) -> {
+            if (commandResultMessage.isExceptional()) {
+                // Start a compensating transaction
+            }
+        });
     }
 }
