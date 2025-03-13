@@ -1,5 +1,6 @@
 package dev.magadiflo.app.query;
 
+import com.magadiflo.core.app.events.ProductReservedEvent;
 import dev.magadiflo.app.core.data.ProductEntity;
 import dev.magadiflo.app.core.data.ProductRepository;
 import dev.magadiflo.app.core.event.ProductCreatedEvent;
@@ -9,6 +10,8 @@ import org.axonframework.config.ProcessingGroup;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.messaging.interceptors.ExceptionHandler;
 import org.springframework.stereotype.Component;
+
+import java.util.Optional;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -29,6 +32,16 @@ public class ProductEventsHandler {
                 .build();
 
         this.productRepository.save(productEntity);
+    }
+
+    @EventHandler
+    public void on(ProductReservedEvent productReservedEvent) {
+        Optional<ProductEntity> optionalProductEntity = this.productRepository.findByProductId(productReservedEvent.getProductId());
+        if (optionalProductEntity.isPresent()) {
+            ProductEntity productEntity = optionalProductEntity.get();
+            productEntity.setQuantity(productEntity.getQuantity() - productReservedEvent.getQuantity());
+            this.productRepository.save(productEntity);
+        }
     }
 
     @ExceptionHandler(resultType = IllegalArgumentException.class)
