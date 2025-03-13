@@ -1,6 +1,7 @@
 package dev.magadiflo.app.command;
 
 import com.magadiflo.core.app.commands.ReserveProductCommand;
+import com.magadiflo.core.app.events.ProductReservedEvent;
 import dev.magadiflo.app.core.event.ProductCreatedEvent;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +53,13 @@ public class ProductAggregate {
         if (this.quantity < reserveProductCommand.getQuantity()) {
             throw new IllegalArgumentException("Insufficient number of items in stock");
         }
+        ProductReservedEvent productReservedEvent = ProductReservedEvent.builder()
+                .orderId(reserveProductCommand.getOrderId())
+                .userId(reserveProductCommand.getUserId())
+                .productId(reserveProductCommand.getProductId())
+                .quantity(reserveProductCommand.getQuantity())
+                .build();
+        AggregateLifecycle.apply(productReservedEvent);
     }
 
     @EventSourcingHandler
@@ -61,6 +69,11 @@ public class ProductAggregate {
         this.title = event.getTitle();
         this.price = event.getPrice();
         this.quantity = event.getQuantity();
+    }
+
+    @EventSourcingHandler
+    public void on(ProductReservedEvent productReservedEvent) {
+        this.quantity -= productReservedEvent.getQuantity();
     }
 
 }
